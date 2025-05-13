@@ -1,0 +1,52 @@
+#!/bin/bash
+set -e
+
+rm -f /usr/local/apache2/logs/httpd.pid
+service apache2  start
+
+apache_ready(){
+	service apache2 status
+}
+
+while !(apache_ready)
+do
+	echo "waiting for apache ..."
+	sleep 3
+	service apache2 start
+done
+
+sudo a2enmod rewrite
+# 原始配置文件路径
+original_config="/etc/apache2/apache2.conf"
+
+# 临时配置文件路径
+temp_config="/etc/apache2/apache2.conf.bak"
+
+# 创建一个临时文件以保存原始文件
+cp $original_config $temp_config
+
+# 使用sed命令进行替换
+sed -i '164s/<Directory \/var\/www\//<Directory \/var\/www\/html\//g' $original_config
+sed -i '166s/AllowOverride None/AllowOverride All/g' $original_config
+
+service apache2 restart
+
+find /var/lib/mysql -type f -exec touch {} \;
+service mysql start &
+
+
+mysql_ready(){
+	mysqladmin ping --socket=/run/mysqld/mysqld.sock --user=root > /dev/null 2>&1
+}
+
+while !(mysql_ready)
+do
+	echo "waiting for mysql ..."
+	sleep 3
+done
+
+mysql -e "source /var/www/html/kasilab.sql;"
+while test "1" = "1"
+do
+	sleep 1000
+done

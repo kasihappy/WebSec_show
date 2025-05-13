@@ -1,0 +1,7 @@
+services:
+  web:
+    build: ./deploy
+    image: xss-demo
+    restart: no
+    ports:
+      - "127.0.0.1:81:80"
